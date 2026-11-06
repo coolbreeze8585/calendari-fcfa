@@ -89,11 +89,22 @@ function createDay(date, selectedMonth) {
 
   // Mostrem les activitats del dia.
   events.forEach(event => {
-    const label = document.createElement("span");
-    label.className = "event-label";
+    const label = document.createElement("span");  
+    
+    const isRest =
+      event.Tipus?.toLowerCase() === "descans";
+    
+    label.className = isRest
+      ? "event-label rest-label"
+      : "event-label";
 
-    label.textContent = event.Nom;
+    label.textContent = isRest    
+      ? "🔒 " + event.Nom
+      : event.Nom;
+    
     cell.appendChild(label);
+});
+
   });
 
   // Si hi ha partits, indiquem quants.
