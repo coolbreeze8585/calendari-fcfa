@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ca">
 <head>
@@ -19,91 +20,159 @@
   </header>
 
   <main>
-    <nav class="controls" aria-label="Navegació del calendari">
-      <button id="prev-month" type="button"
-              aria-label="Mes anterior">
-        ◀
+
+    <!-- Navegació entre vistes -->
+    <nav class="view-navigation" aria-label="Vistes del calendari">
+      <button
+        id="view-calendar"
+        type="button"
+        class="active"
+        aria-current="page">
+        📅 Calendari
       </button>
 
-      <h2 id="month-title">Carregant calendari...</h2>
-
-      <button id="next-month" type="button"
-              aria-label="Mes següent">
-        ▶
+      <button id="view-agenda" type="button">
+        📋 Agenda d'equip
       </button>
-        </nav>
+    </nav>
 
-    <!-- Panell de filtres -->
-    <details id="filters-panel" class="filters-panel">
-      <summary>
-        ⚙️ Filtres
-        <span id="active-filters-count" hidden></span>
-      </summary>
+    <!-- VISTA 1: CALENDARI -->
+    <section id="calendar-view">
 
-      <div class="filters-content">
-
-        <div class="filter-field">
-          <label for="filter-competition">Competició</label>
-          <select id="filter-competition">
-            <option value="">Totes les competicions</option>
-          </select>
-        </div>
-
-        <div class="filter-field">
-          <label for="filter-team">Equip</label>
-          <select id="filter-team">
-            <option value="">Tots els equips</option>
-          </select>
-        </div>
-
-        <div class="filter-field">
-          <label for="filter-search">Cerca</label>
-          <input
-            type="search"
-            id="filter-search"
-            placeholder="Cercar un equip..."
-          >
-        </div>
-
-        <button id="clear-filters" type="button">
-          Netejar filtres
+      <!-- Navegació mensual -->
+      <nav class="controls" aria-label="Navegació del calendari">
+        <button
+          id="prev-month"
+          type="button"
+          aria-label="Mes anterior">
+          ◀
         </button>
 
-      </div>
-    </details>
+        <h2 id="month-title">Carregant calendari...</h2>
 
-    <section
-      id="calendar"
-      class="calendar"
-      aria-label="Calendari de divendres a dilluns">
+        <button
+          id="next-month"
+          type="button"
+          aria-label="Mes següent">
+          ▶
+        </button>
+      </nav>
+
+      <!-- Panell de filtres -->
+      <details id="filters-panel" class="filters-panel">
+        <summary>
+          ⚙️ Filtres
+          <span id="active-filters-count" hidden></span>
+        </summary>
+
+        <div class="filters-content">
+
+          <div class="filter-field">
+            <label for="filter-competition">Competició</label>
+            <select id="filter-competition">
+              <option value="">Totes les competicions</option>
+            </select>
+          </div>
+
+          <div class="filter-field">
+            <label for="filter-team">Equip</label>
+            <select id="filter-team">
+              <option value="">Tots els equips</option>
+            </select>
+          </div>
+
+          <div class="filter-field">
+            <label for="filter-search">Cerca</label>
+            <input
+              type="search"
+              id="filter-search"
+              placeholder="Cercar un equip..."
+            >
+          </div>
+
+          <button id="clear-filters" type="button">
+            Netejar filtres
+          </button>
+
+        </div>
+      </details>
+
+      <!-- Calendari de divendres a dilluns -->
+      <section
+        id="calendar"
+        class="calendar"
+        aria-label="Calendari de divendres a dilluns">
+      </section>
+
+      <!-- Detalls del dia seleccionat -->
+      <section
+        id="day-details"
+        aria-live="polite">
+      </section>
+
     </section>
+    <!-- FINAL VISTA CALENDARI -->
 
-    <section id="day-details" aria-live="polite"></section>
-    
-<details class="about-project">
-  <summary>Sobre aquest calendari</summary>
+    <!-- VISTA 2: AGENDA D'EQUIP -->
+<section id="agenda-view" hidden>
+  <h2>Agenda d'equip</h2>
 
-  <h2>Calendari auxiliar FCFA 2026–27</h2>
+  <div class="agenda-controls">
+    <div class="filter-field">
+      <label for="agenda-team">Selecciona un equip</label>
+      <select id="agenda-team">
+        <option value="">Selecciona un equip...</option>
+      </select>
 
-  <p>
-    Aquest és un projecte independent per facilitar
-    la consulta del calendari de competicions i
-    activitats de futbol americà i flag football
-    de la temporada 2026–27.
-  </p>
+      <!-- Filtre múltiple de competicions -->
+<div class="agenda-competitions">
+  <details id="agenda-competitions-panel">
+    <summary>
+      Competicions: <span id="agenda-competitions-count">Totes</span>
+    </summary>
 
-  <p>
-    La informació pot ser provisional i està
-    subjecta a modificacions.
-    Les comunicacions oficials de la FCFA
-    prevalen sobre les dades d'aquest calendari.
-  </p>
+    <div id="agenda-competitions-list">
+      <!-- Les competicions es carregaran des de Google Sheets -->
+    </div>
+  </details>
+</div>
+    </div>
+    <button id="agenda-clear-filters" type="button">
+  Netejar filtres
+</button>
+  </div>
 
-  <p>
-    Aquesta eina és independent, no oficial
-    i no està afiliada a la FCFA.
-  </p>
-</details>
+  <section id="agenda-results" aria-live="polite">
+    <p>Selecciona un equip per consultar els seus partits.</p>
+  </section>
+</section>
+    <!-- FINAL VISTA AGENDA -->
+
+    <!-- Informació comuna a les dues vistes -->
+    <details class="about-project">
+      <summary>Sobre aquest calendari</summary>
+
+      <h2>Calendari auxiliar FCFA 2026–27</h2>
+
+      <p>
+        Aquest és un projecte independent per facilitar
+        la consulta del calendari de competicions i
+        activitats de futbol americà i flag football
+        de la temporada 2026–27.
+      </p>
+
+      <p>
+        La informació pot ser provisional i està
+        subjecta a modificacions.
+        Les comunicacions oficials de la FCFA
+        prevalen sobre les dades d'aquest calendari.
+      </p>
+
+      <p>
+        Aquesta eina és independent, no oficial
+        i no està afiliada a la FCFA.
+      </p>
+    </details>
 
   </main>
 

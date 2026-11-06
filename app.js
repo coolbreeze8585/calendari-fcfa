@@ -564,6 +564,189 @@ nextButton.addEventListener("click", () => {
   changeMonth(1);
 });
 
+
+function renderAgenda() {
+  const results = document.getElementById("agenda-results");
+  const selectedTeam = document.getElementById("agenda-team").value;
+
+  results.replaceChildren();
+
+  if (!dadesFCFA || !selectedTeam) {
+    results.textContent =
+      "Selecciona un equip per consultar els seus partits.";
+    return;
+  }
+
+  // Competicions seleccionades (cap marcada = totes).
+  const selectedCompetitions = Array.from(
+    document.querySelectorAll(
+      ".agenda-competition-checkbox:checked"
+    )
+  ).map(checkbox => checkbox.value);
+
+  // Cerquem els partits de l'equip.
+  const matches = dadesFCFA.Partits.filter(match => {
+    if (match.EquipA !== selectedTeam &&
+        match.EquipB !== selectedTeam) {
+      return false;
+    }
+
+    const event = dadesFCFA.Esdeveniments.find(
+      e => e.EsdevenimentID === match.EsdevenimentID
+    );
+
+    if (selectedCompetitions.length > 0 &&
+        !selectedCompetitions.includes(event?.CompeticioID)) {
+      return false;
+    }
+
+    return true;
+  });
+
+  // Convertim les dates per ordenar cronològicament.
+  function dateValue(value) {
+    if (!value) return Number.POSITIVE_INFINITY;
+
+    const [day, month, year] = value.split("/").map(Number);
+    if (!day || !month || !year) {
+      return Number.POSITIVE_INFINITY;
+    }
+
+    return new Date(year, month - 1, day).getTime();
+  }
+
+  matches.sort((a, b) =>
+    dateValue(a.Data) - dateValue(b.Data) ||
+    (a.Hora || "").localeCompare(b.Hora || "")
+  );
+
+  const heading = document.createElement("h3");
+  heading.textContent =
+    `${selectedTeam} · ${matches.length} partits`;
+  results.appendChild(heading);
+
+  if (matches.length === 0) {
+    const message = document.createElement("p");
+    message.textContent =
+      "No hi ha partits disponibles amb aquests filtres.";
+    results.appendChild(message);
+    return;
+  }
+
+  
+  // Agrupem els partits per data i seu.
+  const agendaGroups = new Map();
+
+  matches.forEach(match => {
+    const event = dadesFCFA.Esdeveniments.find(
+      e => e.EsdevenimentID === match.EsdevenimentID
+    );
+
+    const venueId = event?.SeuID || "sense-seu";
+
+    const venue = dadesFCFA.Seus.find(
+      s => s.SeuID === venueId
+    );
+
+    const competition = dadesFCFA.Competicions.find(
+      c => c.CompeticioID === event?.CompeticioID
+    );
+
+    // La clau combina data i seu.
+    const key = `${match.Data}|${venueId}`;
+
+    if (!agendaGroups.has(key)) {
+      agendaGroups.set(key, {
+        date: match.Data,
+        venueId: venueId,
+        venueName: venue?.NomSeu || "Seu pendent de confirmar",
+        mapsUrl: venue?.MapsURL || "",
+        matches: []
+      });
+    }
+
+    agendaGroups.get(key).matches.push({
+      ...match,
+      competitionName: competition?.Nom || "Competició pendent"
+    });
+  });
+
+  // Ordenem els grups per data i hora del primer partit.
+  const sortedGroups = [...agendaGroups.values()].sort((a, b) => {
+    const dateDifference = dateValue(a.date) - dateValue(b.date);
+
+    if (dateDifference !== 0) return dateDifference;
+
+    const firstTimeA = a.matches[0]?.Hora || "23:59";
+    const firstTimeB = b.matches[0]?.Hora || "23:59";
+
+    return firstTimeA.localeCompare(firstTimeB);
+  });
+
+  // Comprovació provisional de les agrupacions.
+  sortedGroups.forEach(group => {
+    const section = document.createElement("div");
+    section.className = "agenda-group";
+
+    
+const title = document.createElement("h4");
+
+title.appendChild(
+  document.createTextNode(
+    `${group.date} · ${group.venueName} ` +
+    `(${group.matches.length} partits)`
+  )
+);
+
+// Icona de Google Maps al costat del nom de la seu.
+if (group.mapsUrl) {
+  const mapsLink = document.createElement("a");
+  mapsLink.href = group.mapsUrl;
+  mapsLink.target = "_blank";
+  mapsLink.rel = "noopener noreferrer";
+  mapsLink.textContent = " 🗺️";
+  mapsLink.className = "agenda-maps-link";
+  mapsLink.title = "Obrir la seu a Google Maps";
+  mapsLink.setAttribute("aria-label", "Obrir la seu a Google Maps");
+
+  title.appendChild(mapsLink);
+}
+
+section.appendChild(title);
+
+    
+group.matches.forEach(match => {
+  const row = document.createElement("p");
+
+  const isPostponed =
+    String(match.Estat || "").trim().toLowerCase() === "ajornat";
+
+  const field = String(match.Camp || "").trim();
+
+  const fieldText = field
+    ? " · " + (/^camp\b/i.test(field) ? field : "Camp " + field)
+    : "";
+
+  const statusText = isPostponed
+    ? " · ⏸️ AJORNAT"
+    : fieldText;
+
+  row.textContent =
+    `${match.Hora || "Hora pendent"} · ` +
+    `${match.competitionName} · ` +
+    `${match.EquipA} – ${match.EquipB}` +
+    statusText;
+
+  section.appendChild(row);
+});
+
+
+    results.appendChild(section);
+  });
+
+}
+
+
 async function carregarDades() {
   try {
     const resposta = await fetch(API_URL);
@@ -591,6 +774,75 @@ competitions.forEach(competition => {
   option.textContent = competition.Nom;
   competitionSelect.appendChild(option);
 });
+
+// Competicions de l'Agenda: selecció múltiple.
+const agendaCompetitionsList =
+  document.getElementById("agenda-competitions-list");
+
+agendaCompetitionsList.replaceChildren();
+
+competitions.forEach(competition => {
+  const label = document.createElement("label");
+  label.className = "agenda-competition-option";
+
+  const checkbox = document.createElement("input");
+  checkbox.type = "checkbox";
+  checkbox.value = competition.CompeticioID;
+  checkbox.className = "agenda-competition-checkbox";
+
+  const name = document.createElement("span");
+  name.textContent = competition.Nom;
+
+  label.appendChild(checkbox);
+  label.appendChild(name);
+
+  agendaCompetitionsList.appendChild(label);
+});
+
+
+  // Actualitzem el comptador de competicions seleccionades.
+  const agendaCompetitionsCount =
+    document.getElementById("agenda-competitions-count");
+
+  function updateAgendaCompetitionsCount() {
+    const selected = document.querySelectorAll(
+      ".agenda-competition-checkbox:checked"
+    ).length;
+
+    agendaCompetitionsCount.textContent =
+      selected === 0
+        ? "Totes"
+        : selected === 1
+          ? "1 seleccionada"
+          : `${selected} seleccionades`;
+  }
+
+  // Actualitzem l'Agenda quan canvien les competicions.
+agendaCompetitionsList.addEventListener("change", () => {
+  updateAgendaCompetitionsCount();
+  renderAgenda();
+});
+
+// Actualitzem l'Agenda quan canvia l'equip.
+document.getElementById("agenda-team")
+  .addEventListener("change", renderAgenda);
+
+  // Botó per restablir els filtres de l'Agenda.
+  document.getElementById("agenda-clear-filters")
+    .addEventListener("click", () => {
+      document.getElementById("agenda-team").value = "";
+
+      document.querySelectorAll(
+        ".agenda-competition-checkbox"
+      ).forEach(checkbox => {
+        checkbox.checked = false;
+      });
+
+      updateAgendaCompetitionsCount();
+
+      renderAgenda();
+    });
+
 // Omplim el desplegable d'equips.
 const teamSelect = document.getElementById("filter-team");
 
@@ -609,6 +861,19 @@ teams.forEach(team => {
   option.value = team;
   option.textContent = team;
   teamSelect.appendChild(option);
+});
+
+// Omplim el selector d'equips de l'Agenda.
+const agendaTeamSelect = document.getElementById("agenda-team");
+
+agendaTeamSelect.innerHTML =
+  '<option value="">Selecciona un equip...</option>';
+
+teams.forEach(team => {
+  const option = document.createElement("option");
+  option.value = team;
+  option.textContent = team;
+  agendaTeamSelect.appendChild(option);
 });
 
 renderCalendar();
@@ -650,6 +915,39 @@ document.getElementById("filter-search")
     renderCalendar();
     document.getElementById("day-details").replaceChildren();
   });
+
+  // Navegació entre Calendari i Agenda d'equip.
+const calendarView = document.getElementById("calendar-view");
+const agendaView = document.getElementById("agenda-view");
+
+const calendarButton = document.getElementById("view-calendar");
+const agendaButton = document.getElementById("view-agenda");
+
+function changeView(view) {
+  const showCalendar = view === "calendar";
+
+  calendarView.hidden = !showCalendar;
+  agendaView.hidden = showCalendar;
+
+  calendarButton.classList.toggle("active", showCalendar);
+  agendaButton.classList.toggle("active", !showCalendar);
+
+  if (showCalendar) {
+    calendarButton.setAttribute("aria-current", "page");
+    agendaButton.removeAttribute("aria-current");
+  } else {
+    agendaButton.setAttribute("aria-current", "page");
+    calendarButton.removeAttribute("aria-current");
+  }
+}
+
+calendarButton.addEventListener("click", () => {
+  changeView("calendar");
+});
+
+agendaButton.addEventListener("click", () => {
+  changeView("agenda");
+});
 
 carregarDades();
 renderCalendar();

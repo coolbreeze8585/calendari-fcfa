@@ -369,3 +369,159 @@ footer {
     display: grid;
   }
 }
+/* Navegació entre Calendari i Agenda d'equip */
+
+.view-navigation {
+  display: flex;
+  gap: 8px;
+  margin: 20px 0;
+}
+
+.view-navigation button {
+  flex: 1;
+  padding: 12px 16px;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  background: #1f2937;
+  color: #d1d5db;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.view-navigation button.active {
+  background: #1d4ed8;
+  border-color: #3b82f6;
+  color: #ffffff;
+}
+
+.view-navigation button:hover {
+  border-color: #60a5fa;
+}
+
+@media (max-width: 768px) {
+  .view-navigation {
+    gap: 6px;
+    margin: 12px 0;
+  }
+
+  .view-navigation button {
+    padding: 12px 8px;
+    font-size: 14px;
+  }
+}
+
+/* Filtre múltiple de competicions de l'Agenda */
+
+.agenda-competitions {
+  margin-top: 16px;
+}
+
+#agenda-competitions-panel {
+  background: #1f2937;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+#agenda-competitions-panel summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+#agenda-competitions-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 4px;
+  margin-top: 12px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.agenda-competition-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.agenda-competition-option:hover {
+  background: #374151;
+}
+
+.agenda-competition-option input {
+  width: 17px;
+  height: 17px;
+  margin: 0;
+  flex-shrink: 0;
+  accent-color: #2563eb;
+}
+
+.agenda-competition-option span {
+  color: #ffffff;
+  font-size: 14px;
+}
+
+
+/* Agenda d'equip: agrupacions per data i seu */
+
+#agenda-results {
+  margin-top: 24px;
+}
+
+.agenda-group {
+  background: #1f2937;
+  border: 1px solid #374151;
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.agenda-group h4 {
+  margin: 0 0 8px;
+  font-size: 16px;
+  color: #ffffff;
+}
+
+.agenda-group p {
+  margin: 6px 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.agenda-maps-link {
+  display: inline-block;
+  margin-bottom: 8px;
+  color: #93c5fd;
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.agenda-maps-link:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+  .agenda-group {
+    padding: 12px;
+  }
+
+  .agenda-group h4 {
+    font-size: 15px;
+  }
+
+  .agenda-group p {
+    font-size: 13px;
+  }
+}
+
+.agenda-group h4 .agenda-maps-link {
+  display: inline;
+  margin: 0 0 0 4px;
+  font-size: 15px;
+  text-decoration: none;
+}
