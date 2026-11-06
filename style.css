@@ -282,3 +282,90 @@ footer {
   outline-offset: 3px;
   border-radius: 3px;
 }
+/* Panell de filtres */
+.filters-panel {
+  margin: 16px 0 24px;
+  padding: 14px;
+  background: #1f2937;
+  border: 1px solid #374151;
+  border-radius: 10px;
+}
+
+.filters-panel > summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: #f9fafb;
+}
+
+.filters-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr auto;
+  gap: 12px;
+  align-items: end;
+  margin-top: 14px;
+}
+
+.filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.filter-field label {
+  font-size: 14px;
+  color: #d1d5db;
+}
+
+.filter-field select,
+.filter-field input {
+  width: 100%;
+  min-width: 0;
+  padding: 10px;
+  color: #f9fafb;
+  background: #111827;
+  border: 1px solid #4b5563;
+  border-radius: 6px;
+  font: inherit;
+}
+
+#clear-filters {
+  padding: 10px 14px;
+  color: #f9fafb;
+  background: #374151;
+  border: 1px solid #4b5563;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* Escriptori: filtres sempre visibles */
+@media (min-width: 769px) {
+  .filters-panel > summary {
+    display: none;
+  }
+
+  .filters-content {
+    margin-top: 0;
+  }
+}
+
+/* Mòbil: panell desplegable */
+@media (max-width: 768px) {
+  .filters-content {
+    grid-template-columns: 1fr;
+  }
+
+  .filters-panel {
+    padding: 12px;
+  }
+
+  #clear-filters {
+    width: 100%;
+  }
+}
+/* A l'escriptori, els filtres sempre han de ser visibles. */
+@media (min-width: 769px) {
+  .filters-panel:not([open]) > .filters-content {
+    display: grid;
+  }
+}

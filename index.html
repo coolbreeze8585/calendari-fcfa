@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ca">
 <head>
@@ -32,7 +31,46 @@
               aria-label="Mes següent">
         ▶
       </button>
-    </nav>
+        </nav>
+
+    <!-- Panell de filtres -->
+    <details id="filters-panel" class="filters-panel">
+      <summary>
+        ⚙️ Filtres
+        <span id="active-filters-count" hidden></span>
+      </summary>
+
+      <div class="filters-content">
+
+        <div class="filter-field">
+          <label for="filter-competition">Competició</label>
+          <select id="filter-competition">
+            <option value="">Totes les competicions</option>
+          </select>
+        </div>
+
+        <div class="filter-field">
+          <label for="filter-team">Equip</label>
+          <select id="filter-team">
+            <option value="">Tots els equips</option>
+          </select>
+        </div>
+
+        <div class="filter-field">
+          <label for="filter-search">Cerca</label>
+          <input
+            type="search"
+            id="filter-search"
+            placeholder="Cercar un equip..."
+          >
+        </div>
+
+        <button id="clear-filters" type="button">
+          Netejar filtres
+        </button>
+
+      </div>
+    </details>
 
     <section
       id="calendar"

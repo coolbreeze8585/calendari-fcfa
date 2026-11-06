@@ -6,6 +6,19 @@ const prevButton = document.getElementById("prev-month");
 const nextButton = document.getElementById("next-month");
 const API_URL = "https://script.google.com/macros/s/AKfycbzPvN6DPWnUqzALz7Iu-pKLULjxP5I1cGEEN3Qn84bmWO4bSy3JbfO7Bnves3ppZd26/exec";
 let dadesFCFA = null;
+// Estat inicial del panell de filtres segons la pantalla.
+const filtersPanel = document.getElementById("filters-panel");
+const desktopMedia = window.matchMedia("(min-width: 769px)");
+
+function updateFiltersPanel() {
+  if (desktopMedia.matches) {
+    filtersPanel.open = true;
+  }
+}
+
+updateFiltersPanel();
+
+desktopMedia.addEventListener("change", updateFiltersPanel);
 
 
 const monthNames = [
@@ -60,6 +73,11 @@ function createDay(date, selectedMonth) {
       a.getDate() === b.getDate();
   }
 
+const filtersActive =
+  document.getElementById("filter-competition").value !== "" ||
+  document.getElementById("filter-team").value !== "" ||
+  document.getElementById("filter-search").value.trim() !== "";
+
   const events = dadesFCFA.Esdeveniments.filter(event => {
     const start = parseDate(event.DataInici);
     const end = parseDate(event.DataFi) || start;
@@ -67,9 +85,51 @@ function createDay(date, selectedMonth) {
     return start && end && date >= start && date <= end;
   });
 
-  const matches = dadesFCFA.Partits.filter(match =>
-    sameDay(parseDate(match.Data), date)
-  );
+  // Competició seleccionada al filtre.
+const selectedCompetition =
+  document.getElementById("filter-competition").value;
+
+  // Equip seleccionat al filtre.
+const selectedTeam =
+  document.getElementById("filter-team").value;
+
+const searchText = document.getElementById("filter-search")
+  .value.trim().toLocaleLowerCase("ca");
+
+// Partits del dia que corresponen a la competició seleccionada.
+const matches = dadesFCFA.Partits.filter(match => {
+  if (!sameDay(parseDate(match.Data), date)) {
+    return false;
+  }
+
+  // Filtre per equip.
+  if (selectedTeam &&
+      match.EquipA !== selectedTeam &&
+      match.EquipB !== selectedTeam) {
+    return false;
+  }
+// Cerca de text als noms dels equips.
+if (searchText) {
+  const teamA = String(match.EquipA || "").toLocaleLowerCase("ca");
+  const teamB = String(match.EquipB || "").toLocaleLowerCase("ca");
+
+  if (!teamA.includes(searchText) && !teamB.includes(searchText)) {
+    return false;
+  }
+}
+  // Filtre per competició.
+  if (selectedCompetition) {
+    const event = dadesFCFA.Esdeveniments.find(
+      e => e.EsdevenimentID === match.EsdevenimentID
+    );
+
+    if (event?.CompeticioID !== selectedCompetition) {
+      return false;
+    }
+  }
+
+  return true;
+});
 
   const blocked = events.some(event =>
     event.Tipus?.toLowerCase() === "descans"
@@ -118,11 +178,12 @@ function createDay(date, selectedMonth) {
     );
 
     activities.push({
-      id: group.id,
-      time: group.time,
-      name: competition?.Nom || group.id,
-      type: "competition"
-    });
+  id: group.id,
+  time: group.time,
+  name: competition?.Nom || group.id,
+  type: "competition",
+  matchCount: group.matches.length
+});
   });
 
  
@@ -162,14 +223,20 @@ function createDay(date, selectedMonth) {
           group.time = event.HoraInici;
         }
       } else {
-        activities.push({
-          time: event.HoraInici || (isRest ? "00:00" : "23:59"),
-          name: event.Nom,
-          type: isRest ? "rest" : "general"
-        });
-      }
+  // Els descansos sempre són visibles.
+  // Les activitats generals només apareixen sense filtres.
+  if (isRest || !filtersActive) {
+    activities.push({
+      time: event.HoraInici || (isRest ? "00:00" : "23:59"),
+      name: event.Nom,
+      type: isRest ? "rest" : "general"
+    });
+  }
+}
     });
 
+  // Mostrem els tryouts només quan no hi ha filtres actius.
+if (!filtersActive) {
   tryoutGroups.forEach(group => {
     group.events.sort((a, b) =>
       timeToMinutes(a.HoraInici) - timeToMinutes(b.HoraInici)
@@ -177,7 +244,7 @@ function createDay(date, selectedMonth) {
 
     activities.push(group);
   });
-
+}
   // Ordenem cronològicament.
   
   function timeToMinutes(time) {  
@@ -201,10 +268,16 @@ function createDay(date, selectedMonth) {
       label.classList.add("rest-label");
       label.textContent = "🔒 " + activity.name;
     } else {
-      label.textContent =
-        (activity.time === "23:59" ? "" : activity.time + " · ") +
-        activity.name;
-    }
+  const showCount =
+    activity.type === "competition" &&
+    selectedTeam &&
+    activity.matchCount > 1;
+
+  label.textContent =
+    (activity.time === "23:59" ? "" : activity.time + " · ") +
+    activity.name +
+    (showCount ? ` (${activity.matchCount})` : "");
+}
 
     cell.appendChild(label);
   });
@@ -500,10 +573,45 @@ async function carregarDades() {
     }
 
     const dades = await resposta.json();
-    dadesFCFA = dades;
-    
-    renderCalendar();
+dadesFCFA = dades;
 
+// Omplim el desplegable de competicions.
+const competitionSelect = document.getElementById("filter-competition");
+
+competitionSelect.innerHTML =
+  '<option value="">Totes les competicions</option>';
+
+const competitions = [...dades.Competicions].sort((a, b) =>
+  a.Nom.localeCompare(b.Nom, "ca")
+);
+
+competitions.forEach(competition => {
+  const option = document.createElement("option");
+  option.value = competition.CompeticioID;
+  option.textContent = competition.Nom;
+  competitionSelect.appendChild(option);
+});
+// Omplim el desplegable d'equips.
+const teamSelect = document.getElementById("filter-team");
+
+teamSelect.innerHTML =
+  '<option value="">Tots els equips</option>';
+
+// Recollim els equips dels partits, sense duplicats.
+const teams = [...new Set(
+  dades.Partits.flatMap(match => [match.EquipA, match.EquipB])
+    .map(team => String(team || "").trim())
+    .filter(Boolean)
+)].sort((a, b) => a.localeCompare(b, "ca"));
+
+teams.forEach(team => {
+  const option = document.createElement("option");
+  option.value = team;
+  option.textContent = team;
+  teamSelect.appendChild(option);
+});
+
+renderCalendar();
 
     console.log("API FCFA connectada correctament");
     console.log("Competicions:", dades.Competicions?.length);
@@ -515,6 +623,33 @@ async function carregarDades() {
     console.error("Error connectant amb l'API:", error);
   }
 }
+document.getElementById("filter-competition")
+  .addEventListener("change", () => {
+    renderCalendar();
+    document.getElementById("day-details").replaceChildren();
+  });
+
+  document.getElementById("filter-team")
+  .addEventListener("change", () => {
+    renderCalendar();
+    document.getElementById("day-details").replaceChildren();
+  });
+document.getElementById("clear-filters")
+  .addEventListener("click", () => {
+    // Restablim tots els filtres.
+    document.getElementById("filter-competition").value = "";
+    document.getElementById("filter-team").value = "";
+    document.getElementById("filter-search").value = "";
+
+    // Actualitzem el calendari i eliminem els detalls anteriors.
+    renderCalendar();
+    document.getElementById("day-details").replaceChildren();
+  });
+document.getElementById("filter-search")
+  .addEventListener("input", () => {
+    renderCalendar();
+    document.getElementById("day-details").replaceChildren();
+  });
 
 carregarDades();
 renderCalendar();
