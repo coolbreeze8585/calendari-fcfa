@@ -6,6 +6,7 @@ const monthTitle = document.getElementById("month-title");
 const prevButton = document.getElementById("prev-month");
 const nextButton = document.getElementById("next-month");
 const API_URL = "https://script.google.com/macros/s/AKfycbzPvN6DPWnUqzALz7Iu-pKLULjxP5I1cGEEN3Qn84bmWO4bSy3JbfO7Bnves3ppZd26/exec";
+let dadesFCFA = null;
 
 
 const monthNames = [
@@ -119,6 +120,10 @@ async function carregarDades() {
     }
 
     const dades = await resposta.json();
+    dadesFCFA = dades;
+    
+    renderCalendar();
+
 
     console.log("API FCFA connectada correctament");
     console.log("Competicions:", dades.Competicions?.length);
