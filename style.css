@@ -1,0 +1,133 @@
+
+:root {
+  color-scheme: dark;
+  font-family: system-ui, sans-serif;
+  background: #111827;
+  color: #f9fafb;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+header {
+  background: #1f2937;
+  padding: 20px 16px;
+  text-align: center;
+}
+
+h1 {
+  margin: 0 0 6px;
+  font-size: 1.6rem;
+}
+
+main {
+  max-width: 1000px;
+  margin: auto;
+  padding: 20px 12px;
+}
+
+.controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.controls h2 {
+  margin: 0;
+  text-align: center;
+  font-size: 1.2rem;
+}
+
+button {
+  background: #374151;
+  color: white;
+  border: 1px solid #4b5563;
+  border-radius: 8px;
+  padding: 10px 14px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #4b5563;
+}
+
+.calendar {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.day-header {
+  text-align: center;
+  color: #d1d5db;
+  font-weight: 700;
+  padding: 10px 2px;
+}
+
+.day {
+  background: #1f2937;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  padding: 10px;
+  min-height: 110px;
+  overflow-wrap: anywhere;
+}
+
+.day-number {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.day.has-events {
+  background: #172554;
+  border-color: #2563eb;
+}
+
+.day.blocked {
+  background: #000000;
+  border-color: #6b7280;
+  color: #ffffff;
+}
+
+.day.holiday {
+  border-color: #eab308;
+}
+
+.event-label {
+  display: block;
+  margin-top: 8px;
+  padding: 5px;
+  background: #2563eb;
+  border-radius: 4px;
+  font-size: 0.75rem;
+}
+
+footer {
+  padding: 24px;
+  text-align: center;
+  color: #9ca3af;
+  font-size: 0.8rem;
+}
+
+@media (max-width: 600px) {
+  .day {
+    min-height: 90px;
+    padding: 6px;
+  }
+
+  .day-number {
+    font-size: 0.95rem;
+  }
+
+  .event-label {
+    font-size: 0.65rem;
+    padding: 4px;
+  }
+}
