@@ -191,3 +191,94 @@ footer {
   line-height: 1.6;
   margin-bottom: 12px;
 }
+
+/* Capses de competicions al detall del dia */
+.competition-details {
+  margin: 12px 0;
+  border: 1px solid #3b82f6;
+  border-radius: 10px;
+  background: #1e293b;
+  overflow: hidden;
+}
+
+.competition-details summary {
+  padding: 14px 16px;
+  cursor: pointer;
+  font-weight: 600;
+  background: #172554;
+  color: #ffffff;
+}
+
+.competition-details summary:hover {
+  background: #1e40af;
+}
+
+.competition-details p {
+  margin: 0;
+  padding: 10px 16px;
+  border-top: 1px solid #334155;
+  color: #e2e8f0;
+  line-height: 1.5;
+}
+
+/* Seu dels tryouts */
+.tryout-venue {
+  margin: 0;
+  padding: 14px 16px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #ffffff;
+  background: #1e293b;
+}
+
+/* Diferenciar els tryouts de les competicions */
+.tryout-details {
+  border-color: #64748b;
+}
+
+.tryout-details summary {
+  background: #334155;
+}
+
+.tryout-details summary:hover {
+  background: #475569;
+}
+
+/* Enllaços de Google Maps */
+.maps-link {
+  display: inline-block;
+  margin: 8px 16px 12px;
+  color: #93c5fd;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.maps-link:hover {
+  color: #ffffff;
+}
+
+.maps-link:focus-visible {
+  outline: 2px solid #93c5fd;
+  outline-offset: 3px;
+}
+
+/* Icona de Maps al costat del nom de la seu */
+.maps-icon {
+  display: inline-block;
+  margin-left: 10px;
+  font-size: 16px;
+  text-decoration: none;
+  vertical-align: middle;
+}
+
+.maps-icon:hover {
+  transform: scale(1.2);
+}
+
+.maps-icon:focus-visible {
+  outline: 2px solid #93c5fd;
+  outline-offset: 3px;
+  border-radius: 3px;
+}

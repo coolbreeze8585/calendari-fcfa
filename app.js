@@ -118,25 +118,65 @@ function createDay(date, selectedMonth) {
     );
 
     activities.push({
+      id: group.id,
       time: group.time,
       name: competition?.Nom || group.id,
       type: "competition"
     });
   });
 
-  // Incorporem les activitats generals.
+ 
+  // Agrupem els tryouts per data i seu.
+  const tryoutGroups = new Map();
+
   events
     .filter(event => !event.CompeticioID)
     .forEach(event => {
-      const isRest =
-        event.Tipus?.toLowerCase() === "descans";
+      const isRest = event.Tipus?.toLowerCase() === "descans";
+      const isTryout = event.Tipus?.toLowerCase() === "tryout";
 
-      activities.push({
-        time: event.HoraInici || (isRest ? "00:00" : "23:59"),
-        name: event.Nom,
-        type: isRest ? "rest" : "general"
-      });
+      if (isTryout) {
+        const venueId = event.SeuID || "sense-seu";
+        const key = venueId;
+
+        if (!tryoutGroups.has(key)) {
+          const venue = dadesFCFA.Seus.find(
+            s => s.SeuID === venueId
+          );
+
+          tryoutGroups.set(key, {
+            time: event.HoraInici || "23:59",
+            name: "Tryouts Selecció Catalana",
+            type: "tryout-group",
+            venue: venue?.NomSeu || venueId,
+            mapsUrl: venue?.MapsURL || "",
+            events: []
+          });
+        }
+
+        const group = tryoutGroups.get(key);
+        group.events.push(event);
+
+        if (timeToMinutes(event.HoraInici) <
+            timeToMinutes(group.time)) {
+          group.time = event.HoraInici;
+        }
+      } else {
+        activities.push({
+          time: event.HoraInici || (isRest ? "00:00" : "23:59"),
+          name: event.Nom,
+          type: isRest ? "rest" : "general"
+        });
+      }
     });
+
+  tryoutGroups.forEach(group => {
+    group.events.sort((a, b) =>
+      timeToMinutes(a.HoraInici) - timeToMinutes(b.HoraInici)
+    );
+
+    activities.push(group);
+  });
 
   // Ordenem cronològicament.
   
@@ -168,6 +208,205 @@ function createDay(date, selectedMonth) {
 
     cell.appendChild(label);
   });
+  
+cell.style.cursor = "pointer";
+
+cell.addEventListener("click", () => {
+  const details = document.getElementById("day-details");
+
+  const formattedDate = date.toLocaleDateString("ca-ES", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric"
+  });
+
+  details.innerHTML = "";
+
+  const heading = document.createElement("h2");
+  heading.textContent = formattedDate;
+
+  details.appendChild(heading);
+  
+const activityList = document.createElement("div");
+activityList.className = "day-activities";
+
+if (activities.length === 0) {
+  const emptyMessage = document.createElement("p");
+  emptyMessage.textContent = "No hi ha activitats programades.";
+  activityList.appendChild(emptyMessage);
+} else {
+  
+activities.forEach(activity => {
+  
+if (activity.type === "tryout-group") {
+  const panel = document.createElement("details");
+  panel.className = "competition-details tryout-details";
+
+  const summary = document.createElement("summary");
+  summary.textContent =
+    activity.time + " · " + activity.name;
+
+  panel.appendChild(summary);
+
+  const venueTitle = document.createElement("h3");
+  venueTitle.className = "tryout-venue";
+  venueTitle.textContent = "📍 " + activity.venue;
+  panel.appendChild(venueTitle);
+  
+if (activity.mapsUrl) {
+  const mapsLink = document.createElement("a");
+  mapsLink.href = activity.mapsUrl;
+  mapsLink.textContent = "🗺️";
+  mapsLink.title = "Obrir ubicació a Google Maps";
+  mapsLink.setAttribute("aria-label", "Obrir ubicació a Google Maps");
+  mapsLink.target = "_blank";
+  mapsLink.rel = "noopener noreferrer";
+  mapsLink.className = "maps-icon";
+
+  venueTitle.appendChild(mapsLink);
+}
+
+
+
+  activity.events.forEach(event => {
+    const row = document.createElement("p");
+
+    row.textContent =
+      (event.HoraInici || "Hora pendent") +
+      " · " +
+      event.Nom;
+
+    panel.appendChild(row);
+  });
+
+  activityList.appendChild(panel);
+  return;
+}
+
+  if (activity.type === "competition") {
+    const panel = document.createElement("details");
+    panel.className = "competition-details";
+
+    const summary = document.createElement("summary");
+    summary.textContent =
+      (activity.time === "23:59" ? "" : activity.time + " · ") +
+      activity.name;
+
+    panel.appendChild(summary);
+
+    const competitionMatches = matches.filter(match => {
+      const event = dadesFCFA.Esdeveniments.find(
+        e => e.EsdevenimentID === match.EsdevenimentID
+      );
+
+      return event?.CompeticioID === activity.id;
+    });
+
+    competitionMatches.sort((a, b) => {
+      const timeA = a.Hora || "23:59";
+      const timeB = b.Hora || "23:59";
+      return timeA.localeCompare(timeB, "ca", { numeric: true });
+    });
+
+    
+const venueGroups = new Map();
+
+// Agrupem els partits segons la seu.
+competitionMatches.forEach(match => {
+  const event = dadesFCFA.Esdeveniments.find(
+    e => e.EsdevenimentID === match.EsdevenimentID
+  );
+
+  const venueId = event?.SeuID || "sense-seu";
+
+  if (!venueGroups.has(venueId)) {
+    const venue = dadesFCFA.Seus.find(
+      s => s.SeuID === venueId
+    );
+
+    venueGroups.set(venueId, {
+      name: venue?.NomSeu || "Seu pendent de confirmar",
+      mapsUrl: venue?.MapsURL || "",
+      matches: []
+    });
+  }
+
+  venueGroups.get(venueId).matches.push(match);
+});
+
+// Ordenem les seus per l'hora del primer partit.
+const sortedVenues = [...venueGroups.values()].sort(
+  (a, b) => {
+    const firstA = a.matches[0]?.Hora || "23:59";
+    const firstB = b.matches[0]?.Hora || "23:59";
+
+    return timeToMinutes(firstA) - timeToMinutes(firstB);
+  }
+);
+
+// Mostrem les seus i els seus partits.
+sortedVenues.forEach(venue => {
+  const venueSection = document.createElement("div");
+  venueSection.className = "venue-section";
+
+  const venueTitle = document.createElement("h3");
+  venueTitle.textContent = "📍 " + venue.name;
+  venueSection.appendChild(venueTitle);
+  
+if (venue.mapsUrl) {
+  const mapsLink = document.createElement("a");
+  mapsLink.href = venue.mapsUrl;
+  mapsLink.textContent = "🗺️";
+  mapsLink.title = "Obrir ubicació a Google Maps";
+  mapsLink.setAttribute("aria-label", "Obrir ubicació a Google Maps");
+  mapsLink.target = "_blank";
+  mapsLink.rel = "noopener noreferrer";
+  mapsLink.className = "maps-icon";
+
+  venueTitle.appendChild(mapsLink);
+}
+
+
+
+  venue.matches.forEach(match => {
+    const row = document.createElement("p");
+
+    row.textContent =
+      (match.Hora || "Hora pendent") +
+      " · " +
+      match.EquipA +
+      " – " +
+      match.EquipB +
+      (match.Camp ? " · Camp " + match.Camp : "");
+
+    venueSection.appendChild(row);
+  });
+
+  panel.appendChild(venueSection);
+});
+
+
+    activityList.appendChild(panel);
+  } else {
+    const item = document.createElement("p");
+    item.textContent =
+      (activity.type === "rest" ? "🔒 " : "") +
+      (activity.time === "23:59" || activity.type === "rest"
+        ? ""
+        : activity.time + " · ") +
+      activity.name;
+
+    activityList.appendChild(item);
+  }
+});
+
+}
+
+details.appendChild(activityList);
+
+});
+
 
   return cell;
 }
