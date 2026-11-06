@@ -110,4 +110,26 @@ nextButton.addEventListener("click", () => {
   changeMonth(1);
 });
 
+async function carregarDades() {
+  try {
+    const resposta = await fetch(API_URL);
+
+    if (!resposta.ok) {
+      throw new Error("Error HTTP: " + resposta.status);
+    }
+
+    const dades = await resposta.json();
+
+    console.log("API FCFA connectada correctament");
+    console.log("Competicions:", dades.Competicions?.length);
+    console.log("Esdeveniments:", dades.Esdeveniments?.length);
+    console.log("Seus:", dades.Seus?.length);
+    console.log("Partits:", dades.Partits?.length);
+
+  } catch (error) {
+    console.error("Error connectant amb l'API:", error);
+  }
+}
+
+carregarDades();
 renderCalendar();
