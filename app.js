@@ -1,4 +1,3 @@
-
 "use strict";
 
 const calendar = document.getElementById("calendar");
@@ -27,6 +26,7 @@ function createDate(year, month, day) {
   return new Date(year, month, day, 12);
 }
 
+
 function createDay(date, selectedMonth) {
   const cell = document.createElement("div");
   cell.className = "day";
@@ -38,8 +38,73 @@ function createDay(date, selectedMonth) {
   const number = document.createElement("span");
   number.className = "day-number";
   number.textContent = date.getDate();
-
   cell.appendChild(number);
+
+  if (!dadesFCFA) return cell;
+
+  // Convertim una data DD/MM/AAAA en una data local.
+  function parseDate(value) {
+    if (!value) return null;
+
+    const parts = value.split("/");
+    if (parts.length !== 3) return null;
+
+    return new Date(
+      Number(parts[2]),
+      Number(parts[1]) - 1,
+      Number(parts[0]),
+      12
+    );
+  }
+
+  const sameDay = (a, b) =>
+    a && b &&
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate();
+
+  // Activitats que coincideixen amb la data.
+  const events = dadesFCFA.Esdeveniments.filter(event => {
+    const start = parseDate(event.DataInici);
+    const end = parseDate(event.DataFi) || start;
+
+    return start && end && date >= start && date <= end;
+  });
+
+  // Partits programats per a la data.
+  const matches = dadesFCFA.Partits.filter(match =>
+    sameDay(parseDate(match.Data), date)
+  );
+
+  // Detectem els descansos o bloquejos.
+  const blocked = events.some(event =>
+    event.Tipus?.toLowerCase() === "descans"
+  );
+
+  if (blocked) {
+    cell.classList.add("blocked");
+  } else if (events.length || matches.length) {
+    cell.classList.add("has-events");
+  }
+
+  // Mostrem les activitats del dia.
+  events.forEach(event => {
+    const label = document.createElement("span");
+    label.className = "event-label";
+
+    label.textContent = event.Nom;
+    cell.appendChild(label);
+  });
+
+  // Si hi ha partits, indiquem quants.
+  if (matches.length > 0) {
+    const label = document.createElement("span");
+    label.className = "event-label";
+    label.textContent =
+      `${matches.length} partit${matches.length === 1 ? "" : "s"}`;
+
+    cell.appendChild(label);
+  }
 
   return cell;
 }
