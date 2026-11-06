@@ -27,6 +27,7 @@ function createDate(year, month, day) {
 }
 
 
+
 function createDay(date, selectedMonth) {
   const cell = document.createElement("div");
   cell.className = "day";
@@ -42,28 +43,23 @@ function createDay(date, selectedMonth) {
 
   if (!dadesFCFA) return cell;
 
-  // Convertim una data DD/MM/AAAA en una data local.
   function parseDate(value) {
     if (!value) return null;
 
     const parts = value.split("/");
     if (parts.length !== 3) return null;
 
-    return new Date(
-      Number(parts[2]),
-      Number(parts[1]) - 1,
-      Number(parts[0]),
-      12
-    );
+    const [day, month, year] = parts.map(Number);
+    return new Date(year, month - 1, day, 12);
   }
 
-  const sameDay = (a, b) =>
-    a && b &&
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate();
+  function sameDay(a, b) {
+    return a && b &&
+      a.getFullYear() === b.getFullYear() &&
+      a.getMonth() === b.getMonth() &&
+      a.getDate() === b.getDate();
+  }
 
-  // Activitats que coincideixen amb la data.
   const events = dadesFCFA.Esdeveniments.filter(event => {
     const start = parseDate(event.DataInici);
     const end = parseDate(event.DataFi) || start;
@@ -71,12 +67,10 @@ function createDay(date, selectedMonth) {
     return start && end && date >= start && date <= end;
   });
 
-  // Partits programats per a la data.
   const matches = dadesFCFA.Partits.filter(match =>
     sameDay(parseDate(match.Data), date)
   );
 
-  // Detectem els descansos o bloquejos.
   const blocked = events.some(event =>
     event.Tipus?.toLowerCase() === "descans"
   );
@@ -87,38 +81,97 @@ function createDay(date, selectedMonth) {
     cell.classList.add("has-events");
   }
 
-  // Mostrem les activitats del dia.
-  events.forEach(event => {
-    const label = document.createElement("span");  
-    
-    const isRest =
-      event.Tipus?.toLowerCase() === "descans";
-    
-    label.className = isRest
-      ? "event-label rest-label"
-      : "event-label";
+  const activities = [];
 
-    label.textContent = isRest    
-      ? "🔒 " + event.Nom
-      : event.Nom;
-    
-    cell.appendChild(label);
-});
+  // Agrupem els partits per competició.
+  const competitions = new Map();
 
+  matches.forEach(match => {
+    const event = dadesFCFA.Esdeveniments.find(
+      e => e.EsdevenimentID === match.EsdevenimentID
+    );
+
+    if (!event || !event.CompeticioID) return;
+
+    const id = event.CompeticioID;
+    const time = match.Hora || "23:59";
+
+    if (!competitions.has(id)) {
+      competitions.set(id, {
+        id,
+        time,
+        matches: []
+      });
+    }
+
+    const group = competitions.get(id);
+    group.matches.push(match);
+
+    if (time < group.time) {
+      group.time = time;
+    }
   });
 
-  // Si hi ha partits, indiquem quants.
-  if (matches.length > 0) {
+  competitions.forEach(group => {
+    const competition = dadesFCFA.Competicions.find(
+      c => c.CompeticioID === group.id
+    );
+
+    activities.push({
+      time: group.time,
+      name: competition?.Nom || group.id,
+      type: "competition"
+    });
+  });
+
+  // Incorporem les activitats generals.
+  events
+    .filter(event => !event.CompeticioID)
+    .forEach(event => {
+      const isRest =
+        event.Tipus?.toLowerCase() === "descans";
+
+      activities.push({
+        time: event.HoraInici || (isRest ? "00:00" : "23:59"),
+        name: event.Nom,
+        type: isRest ? "rest" : "general"
+      });
+    });
+
+  // Ordenem cronològicament.
+  
+  function timeToMinutes(time) {  
+    if (!time || time === "23:59") return 1439;
+
+    const [hours, minutes] = time.split(":").map(Number);
+    return hours * 60 + minutes;
+}
+
+  activities.sort((a, b) =>
+    timeToMinutes(a.time) - timeToMinutes(b.time) ||
+    a.name.localeCompare(b.name, "ca")
+  );
+
+
+  activities.forEach(activity => {
     const label = document.createElement("span");
     label.className = "event-label";
-    label.textContent =
-      `${matches.length} partit${matches.length === 1 ? "" : "s"}`;
+
+    if (activity.type === "rest") {
+      label.classList.add("rest-label");
+      label.textContent = "🔒 " + activity.name;
+    } else {
+      label.textContent =
+        (activity.time === "23:59" ? "" : activity.time + " · ") +
+        activity.name;
+    }
 
     cell.appendChild(label);
-  }
+  });
 
   return cell;
 }
+
 
 function renderCalendar() {
   calendar.replaceChildren();

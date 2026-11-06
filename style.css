@@ -131,3 +131,28 @@ footer {
     padding: 4px;
   }
 }
+
+/* Calendari sense límit d'activitats visibles */
+.day {
+  height: auto;
+  max-height: none;
+  overflow: visible;
+}
+
+.event-label {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+/* Diferenciar les activitats generals */
+.day .event-label {
+  line-height: 1.4;
+}
+
+/* Etiquetes dels dies bloquejats */
+.rest-label {
+  background: #000000;
+  color: #ffffff;
+  border: 1px solid #6b7280;
+  font-weight: 700;
+}
