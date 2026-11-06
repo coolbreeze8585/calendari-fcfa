@@ -367,27 +367,31 @@ if (venue.mapsUrl) {
   venueTitle.appendChild(mapsLink);
 }
 
-
-
   venue.matches.forEach(match => {
-    const row = document.createElement("p");
+  const row = document.createElement("p");
 
-    row.textContent =
-      (match.Hora || "Hora pendent") +
-      " · " +
-      match.EquipA +
-      " – " +
-      match.EquipB +
-      (match.Camp ? " · Camp " + match.Camp : "");
+  const ajornat = ["ajornat", "no disputat", "no disputats"]
+  .includes(match.Estat?.trim().toLowerCase());
 
-    venueSection.appendChild(row);
-  });
-
-  panel.appendChild(venueSection);
-});
-
-
-    activityList.appendChild(panel);
+  row.textContent =
+    (match.Hora || "Hora pendent") +
+    " · " +
+    match.EquipA +
+    " – " +
+    match.EquipB +
+    (ajornat
+      ? " · ⏸️ AJORNAT"
+      : match.Camp
+        ? " · " + match.Camp
+        : "");
+      
+        venueSection.appendChild(row);
+      });
+      
+      panel.appendChild(venueSection);
+    });
+    
+      activityList.appendChild(panel);
   } else {
     const item = document.createElement("p");
     item.textContent =
@@ -404,6 +408,14 @@ if (venue.mapsUrl) {
 }
 
 details.appendChild(activityList);
+
+// Desplaçament automàtic als detalls només en mòbils.
+if (window.matchMedia("(max-width: 768px)").matches) {
+  details.scrollIntoView({
+    behavior: "smooth",
+    block: "start"
+  });
+}
 
 });
 
