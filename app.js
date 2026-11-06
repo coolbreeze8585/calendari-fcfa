@@ -5,6 +5,8 @@ const calendar = document.getElementById("calendar");
 const monthTitle = document.getElementById("month-title");
 const prevButton = document.getElementById("prev-month");
 const nextButton = document.getElementById("next-month");
+const API_URL = "https://script.google.com/macros/s/AKfycbzPvN6DPWnUqzALz7Iu-pKLULjxP5I1cGEEN3Qn84bmWO4bSy3JbfO7Bnves3ppZd26/exec";
+
 
 const monthNames = [
   "Gener", "Febrer", "Març", "Abril",
