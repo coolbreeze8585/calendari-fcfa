@@ -156,3 +156,38 @@ footer {
   border: 1px solid #6b7280;
   font-weight: 700;
 }
+
+/* Informació desplegable del projecte */
+.about-project {
+  margin-top: 24px;
+  padding: 16px 20px;
+  background: #1f2937;
+  border: 1px solid #374151;
+  border-radius: 10px;
+  color: #f9fafb;
+}
+
+.about-project summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.about-project summary:hover {
+  color: #93c5fd;
+}
+
+.about-project[open] summary {
+  margin-bottom: 16px;
+}
+
+.about-project h2 {
+  font-size: 18px;
+  margin-bottom: 12px;
+}
+
+.about-project p {
+  color: #d1d5db;
+  line-height: 1.6;
+  margin-bottom: 12px;
+}
