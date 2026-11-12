@@ -143,33 +143,28 @@ if (searchText) {
 
   const activities = [];
 
-  // Agrupem els partits per competició.
+  // La competició seleccionada mostra totes les seves jornades,
+  // independentment dels partits de l'equip triat.
   const competitions = new Map();
-
-  matches.forEach(match => {
-    const event = dadesFCFA.Esdeveniments.find(
-      e => e.EsdevenimentID === match.EsdevenimentID
-    );
-
-    if (!event || !event.CompeticioID) return;
-
+  const dayEvents = events.filter(event => Boolean(event.CompeticioID));
+  dayEvents.forEach(event => {
     const id = event.CompeticioID;
-    const time = match.Hora || "23:59";
-
-    if (!competitions.has(id)) {
-      competitions.set(id, {
-        id,
-        time,
-        matches: []
-      });
-    }
-
+    if (selectedCompetition && id !== selectedCompetition) return;
+    const eventMatches = dadesFCFA.Partits.filter(match =>
+      match.EsdevenimentID === event.EsdevenimentID &&
+      sameDay(parseDate(match.Data), date)
+    );
+    const relevant = eventMatches.filter(match =>
+      (!selectedTeam || match.EquipA === selectedTeam || match.EquipB === selectedTeam) &&
+      (!searchText || String(match.EquipA || "").toLocaleLowerCase("ca").includes(searchText) ||
+        String(match.EquipB || "").toLocaleLowerCase("ca").includes(searchText))
+    );
+    if (!selectedCompetition && (selectedTeam || searchText) && !relevant.length) return;
+    const time = eventMatches.map(m => m.Hora).filter(Boolean).sort()[0] || event.HoraInici || "23:59";
+    if (!competitions.has(id)) competitions.set(id, { id, time, matches: [] });
     const group = competitions.get(id);
-    group.matches.push(match);
-
-    if (time < group.time) {
-      group.time = time;
-    }
+    group.matches.push(...eventMatches);
+    if (time < group.time) group.time = time;
   });
 
   competitions.forEach(group => {
@@ -368,13 +363,22 @@ if (activity.mapsUrl) {
 
     panel.appendChild(summary);
 
-    const competitionMatches = matches.filter(match => {
+    const competitionMatches = dadesFCFA.Partits.filter(match => {
       const event = dadesFCFA.Esdeveniments.find(
         e => e.EsdevenimentID === match.EsdevenimentID
       );
-
-      return event?.CompeticioID === activity.id;
+      if (event?.CompeticioID !== activity.id || !sameDay(parseDate(match.Data), date)) return false;
+      // Sense competició triada, el filtre d'equip/cerca continua restringint els partits.
+      if (!selectedCompetition && selectedTeam && match.EquipA !== selectedTeam && match.EquipB !== selectedTeam) return false;
+      if (!selectedCompetition && searchText && !String(match.EquipA || "").toLocaleLowerCase("ca").includes(searchText) && !String(match.EquipB || "").toLocaleLowerCase("ca").includes(searchText)) return false;
+      return true;
     });
+
+    if (competitionMatches.length === 0) {
+      const empty = document.createElement("p");
+      empty.textContent = "Jornada registrada, sense partits programats per a aquest dia.";
+      panel.appendChild(empty);
+    }
 
     competitionMatches.sort((a, b) => {
       const timeA = a.Hora || "23:59";
@@ -458,6 +462,11 @@ if (venue.mapsUrl) {
         ? " · " + match.Camp
         : "");
       
+        if (selectedTeam && (match.EquipA === selectedTeam || match.EquipB === selectedTeam)) {
+          row.style.fontWeight = "700";
+          row.style.borderLeft = "3px solid currentColor";
+          row.style.paddingLeft = "0.65rem";
+        }
         venueSection.appendChild(row);
       });
       
@@ -568,184 +577,112 @@ nextButton.addEventListener("click", () => {
 function renderAgenda() {
   const results = document.getElementById("agenda-results");
   const selectedTeam = document.getElementById("agenda-team").value;
-
+  const selectedCompetitions = Array.from(document.querySelectorAll(
+    ".agenda-competition-checkbox:checked"
+  )).map(input => input.value);
   results.replaceChildren();
 
-  if (!dadesFCFA || !selectedTeam) {
-    results.textContent =
-      "Selecciona un equip per consultar els seus partits.";
+  if (!dadesFCFA || (!selectedTeam && selectedCompetitions.length === 0)) {
+    results.textContent = "Selecciona un equip o una competició per consultar les jornades.";
     return;
   }
 
-  // Competicions seleccionades (cap marcada = totes).
-  const selectedCompetitions = Array.from(
-    document.querySelectorAll(
-      ".agenda-competition-checkbox:checked"
-    )
-  ).map(checkbox => checkbox.value);
-
-  // Cerquem els partits de l'equip.
-  const matches = dadesFCFA.Partits.filter(match => {
-    if (match.EquipA !== selectedTeam &&
-        match.EquipB !== selectedTeam) {
-      return false;
-    }
-
-    const event = dadesFCFA.Esdeveniments.find(
-      e => e.EsdevenimentID === match.EsdevenimentID
-    );
-
-    if (selectedCompetitions.length > 0 &&
-        !selectedCompetitions.includes(event?.CompeticioID)) {
-      return false;
-    }
-
-    return true;
-  });
-
-  // Convertim les dates per ordenar cronològicament.
   function dateValue(value) {
     if (!value) return Number.POSITIVE_INFINITY;
-
-    const [day, month, year] = value.split("/").map(Number);
-    if (!day || !month || !year) {
-      return Number.POSITIVE_INFINITY;
-    }
-
-    return new Date(year, month - 1, day).getTime();
+    const parts = String(value).split("/").map(Number);
+    if (parts.length !== 3 || parts.some(x => !Number.isFinite(x))) return Number.POSITIVE_INFINITY;
+    return new Date(parts[2], parts[1] - 1, parts[0]).getTime();
   }
 
-  matches.sort((a, b) =>
-    dateValue(a.Data) - dateValue(b.Data) ||
-    (a.Hora || "").localeCompare(b.Hora || "")
+  const eventMap = new Map(dadesFCFA.Esdeveniments.map(e => [e.EsdevenimentID, e]));
+  const matchesByEvent = new Map();
+  dadesFCFA.Partits.forEach(match => {
+    if (!matchesByEvent.has(match.EsdevenimentID)) matchesByEvent.set(match.EsdevenimentID, []);
+    matchesByEvent.get(match.EsdevenimentID).push(match);
+  });
+
+  // Amb competició seleccionada, totes les jornades. Sense competició,
+  // només les jornades en què participa l'equip seleccionat.
+  const events = dadesFCFA.Esdeveniments.filter(event => {
+    if (!event.CompeticioID) return false;
+    if (selectedCompetitions.length && !selectedCompetitions.includes(event.CompeticioID)) return false;
+    const eventMatches = matchesByEvent.get(event.EsdevenimentID) || [];
+    return selectedCompetitions.length > 0 || eventMatches.some(m =>
+      m.EquipA === selectedTeam || m.EquipB === selectedTeam
+    );
+  }).sort((a, b) =>
+    dateValue(a.DataInici) - dateValue(b.DataInici) ||
+    String(a.Nom || "").localeCompare(String(b.Nom || ""), "ca")
   );
 
   const heading = document.createElement("h3");
-  heading.textContent =
-    `${selectedTeam} · ${matches.length} partits`;
+  heading.textContent = selectedTeam
+    ? `Agenda de ${selectedTeam}`
+    : "Jornades de les competicions seleccionades";
   results.appendChild(heading);
 
-  if (matches.length === 0) {
-    const message = document.createElement("p");
-    message.textContent =
-      "No hi ha partits disponibles amb aquests filtres.";
-    results.appendChild(message);
+  if (!events.length) {
+    const p = document.createElement("p");
+    p.textContent = "No hi ha jornades disponibles amb aquests filtres.";
+    results.appendChild(p);
     return;
   }
 
-  
-  // Agrupem els partits per data i seu.
-  const agendaGroups = new Map();
-
-  matches.forEach(match => {
-    const event = dadesFCFA.Esdeveniments.find(
-      e => e.EsdevenimentID === match.EsdevenimentID
+  events.forEach(event => {
+    const venue = dadesFCFA.Seus.find(s => s.SeuID === event.SeuID);
+    const competition = dadesFCFA.Competicions.find(c => c.CompeticioID === event.CompeticioID);
+    const allMatches = (matchesByEvent.get(event.EsdevenimentID) || []).slice();
+    const visibleMatches = selectedTeam
+      ? allMatches.filter(m => m.EquipA === selectedTeam || m.EquipB === selectedTeam)
+      : allMatches;
+    visibleMatches.sort((a, b) =>
+      dateValue(a.Data) - dateValue(b.Data) ||
+      String(a.Hora || "").localeCompare(String(b.Hora || ""))
     );
 
-    const venueId = event?.SeuID || "sense-seu";
+    const section = document.createElement("details");
+    section.className = "agenda-group competition-details";
+    const summary = document.createElement("summary");
+    const dateLabel = event.DataInici || "Data pendent";
+    const name = event.Nom || competition?.Nom || event.CompeticioID;
+    const count = visibleMatches.length;
+    summary.textContent = `${dateLabel} · ${competition?.Nom || event.CompeticioID} · ${name} (${count} ${count === 1 ? "partit" : "partits"})`;
+    section.appendChild(summary);
 
-    const venue = dadesFCFA.Seus.find(
-      s => s.SeuID === venueId
-    );
+    const title = document.createElement("h4");
+    title.textContent = `📍 ${venue?.NomSeu || event.SeuID || "Seu pendent de confirmar"}`;
+    if (venue?.MapsURL) {
+      const link = document.createElement("a");
+      link.href = venue.MapsURL;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.textContent = " 🗺️";
+      link.title = "Obrir la seu a Google Maps";
+      title.appendChild(link);
+    }
+    section.appendChild(title);
 
-    const competition = dadesFCFA.Competicions.find(
-      c => c.CompeticioID === event?.CompeticioID
-    );
-
-    // La clau combina data i seu.
-    const key = `${match.Data}|${venueId}`;
-
-    if (!agendaGroups.has(key)) {
-      agendaGroups.set(key, {
-        date: match.Data,
-        venueId: venueId,
-        venueName: venue?.NomSeu || "Seu pendent de confirmar",
-        mapsUrl: venue?.MapsURL || "",
-        matches: []
-      });
+    if (!visibleMatches.length) {
+      const p = document.createElement("p");
+      p.textContent = selectedTeam
+        ? "Aquest equip no té cap partit programat en aquesta jornada."
+        : "No hi ha partits registrats en aquesta jornada.";
+      section.appendChild(p);
     }
 
-    agendaGroups.get(key).matches.push({
-      ...match,
-      competitionName: competition?.Nom || "Competició pendent"
+    visibleMatches.forEach(match => {
+      const row = document.createElement("p");
+      const field = String(match.Camp || "").trim();
+      const fieldText = field ? " · " + (/^camp\b/i.test(field) ? field : "Camp " + field) : "";
+      const status = String(match.Estat || "").trim().toLowerCase();
+      const postponed = ["ajornat", "no disputat", "no disputats"].includes(status);
+      row.textContent = `${match.Data || dateLabel} · ${match.Hora || "Hora pendent"} · ${match.EquipA} – ${match.EquipB}` +
+        (postponed ? " · ⏸️ NO DISPUTAT / AJORNAT" : fieldText);
+      section.appendChild(row);
     });
-  });
-
-  // Ordenem els grups per data i hora del primer partit.
-  const sortedGroups = [...agendaGroups.values()].sort((a, b) => {
-    const dateDifference = dateValue(a.date) - dateValue(b.date);
-
-    if (dateDifference !== 0) return dateDifference;
-
-    const firstTimeA = a.matches[0]?.Hora || "23:59";
-    const firstTimeB = b.matches[0]?.Hora || "23:59";
-
-    return firstTimeA.localeCompare(firstTimeB);
-  });
-
-  // Comprovació provisional de les agrupacions.
-  sortedGroups.forEach(group => {
-    const section = document.createElement("div");
-    section.className = "agenda-group";
-
-    
-const title = document.createElement("h4");
-
-title.appendChild(
-  document.createTextNode(
-    `${group.date} · ${group.venueName} ` +
-    `(${group.matches.length} partits)`
-  )
-);
-
-// Icona de Google Maps al costat del nom de la seu.
-if (group.mapsUrl) {
-  const mapsLink = document.createElement("a");
-  mapsLink.href = group.mapsUrl;
-  mapsLink.target = "_blank";
-  mapsLink.rel = "noopener noreferrer";
-  mapsLink.textContent = " 🗺️";
-  mapsLink.className = "agenda-maps-link";
-  mapsLink.title = "Obrir la seu a Google Maps";
-  mapsLink.setAttribute("aria-label", "Obrir la seu a Google Maps");
-
-  title.appendChild(mapsLink);
-}
-
-section.appendChild(title);
-
-    
-group.matches.forEach(match => {
-  const row = document.createElement("p");
-
-  const isPostponed =
-    String(match.Estat || "").trim().toLowerCase() === "ajornat";
-
-  const field = String(match.Camp || "").trim();
-
-  const fieldText = field
-    ? " · " + (/^camp\b/i.test(field) ? field : "Camp " + field)
-    : "";
-
-  const statusText = isPostponed
-    ? " · ⏸️ AJORNAT"
-    : fieldText;
-
-  row.textContent =
-    `${match.Hora || "Hora pendent"} · ` +
-    `${match.competitionName} · ` +
-    `${match.EquipA} – ${match.EquipB}` +
-    statusText;
-
-  section.appendChild(row);
-});
-
-
     results.appendChild(section);
   });
-
 }
-
 
 async function carregarDades() {
   try {
