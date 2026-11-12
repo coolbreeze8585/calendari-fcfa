@@ -786,12 +786,20 @@ const teamSelect = document.getElementById("filter-team");
 teamSelect.innerHTML =
   '<option value="">Tots els equips</option>';
 
-// Recollim els equips dels partits, sense duplicats.
+// Els selectors mostren només els equips del catàleg oficial,
+// no els marcadors provisionals de playoffs presents a Partits.
 const teams = [...new Set(
-  dades.Partits.flatMap(match => [match.EquipA, match.EquipB])
-    .map(team => String(team || "").trim())
+  (Array.isArray(dades.Equips) ? dades.Equips : [])
+    .filter(equip => String(equip.Actiu ?? "").trim().toLowerCase() !== "false" &&
+                     String(equip.Actiu ?? "").trim().toLowerCase() !== "no" &&
+                     String(equip.Actiu ?? "").trim() !== "0")
+    .map(equip => String(equip.NomEquip || "").trim())
     .filter(Boolean)
 )].sort((a, b) => a.localeCompare(b, "ca"));
+
+if (!Array.isArray(dades.Equips)) {
+  console.warn("L'API no retorna 'Equips'. Cal incloure aquesta pestanya a la resposta de l'Apps Script.");
+}
 
 teams.forEach(team => {
   const option = document.createElement("option");
